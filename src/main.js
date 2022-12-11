@@ -1,10 +1,11 @@
 import * as THREE from '../libs/three_js/three.module.js';
 import * as TWEEN from '../libs/tweenjs/tween.esm.js';
 import { GUI } from '../libs/human_interface/dat.gui.module.js';
-import { OrbitControls } from '../libs/human_interface/OrbitControls.js';
 import Stats from '../libs/human_interface/stats.module.js';
-import { ColorGUIHelper } from './utils/colorGUIHelper.js';
-let canvas, camera, scene, renderer, pixelRatio, width, height, stats, gui;
+
+import { CameraMover } from './cameraMover.js';
+
+let canvas, camera, scene, renderer, pixelRatio, width, height, stats, gui, cameraMover;
 
 let options =
 {
@@ -18,6 +19,7 @@ let relation, frames
 
 init();
 render();
+
 function init() {
     //Container
     const container = document.createElement('div');
@@ -32,26 +34,88 @@ function init() {
     renderer.shadowMap.enabled = true;
     //Camera
 
-    const fov = 45;
+    const fov = 36;
     const aspect = window.innerWidth / window.innerHeight;
-    const near = 0.1;
-    const far = 8000;
+    const near = 0.25;
+    const far = 200;
     camera = new THREE.PerspectiveCamera(fov, aspect, near, far);
-    camera.position.set(0, 0, 5000);
-
-    // CONTROLS ------------------------------------------------------------------
-    const controls = new OrbitControls(camera, renderer.domElement);
-    controls.target.set(0, 100, 0);
-    controls.update();
-
+    cameraMover = new CameraMover(camera, renderer.domElement)
 
     //Stats
     stats = new Stats();
     container.appendChild(stats.dom);
-    //Scene
-    scene = new THREE.Scene();
-    scene.background = new THREE.Color(0x505050);
 
+    //Scene, Lights, Object
+    scene = new THREE.Scene();
+    //scene.background = new THREE.Color(0x505050);
+    scene.add(new THREE.AmbientLight(0xffffff, 0.5));
+    const spotLight = new THREE.SpotLight(0xffffff, 0.6);
+    spotLight.angle = Math.PI / 5;
+    spotLight.penumbra = 0.2;
+    spotLight.position.set(2, 3, 3);
+    spotLight.castShadow = true;
+    spotLight.shadow.camera.near = 3;
+    spotLight.shadow.camera.far = 10;
+    spotLight.shadow.mapSize.width = 1024;
+    spotLight.shadow.mapSize.height = 1024;
+    //scene.add(spotLight);
+
+    const dirLight = new THREE.DirectionalLight(0xffffff, 0.6);
+    dirLight.position.set(0, 2, 0);
+    dirLight.castShadow = true;
+    dirLight.shadow.camera.near = 1;
+    dirLight.shadow.camera.far = 10;
+
+    dirLight.shadow.camera.right = 1;
+    dirLight.shadow.camera.left = - 1;
+    dirLight.shadow.camera.top = 1;
+    dirLight.shadow.camera.bottom = - 1;
+
+    dirLight.shadow.mapSize.width = 1024;
+    dirLight.shadow.mapSize.height = 1024;
+    scene.add(dirLight);
+    // Geometry
+
+    let object = new THREE.Group();
+
+    //const geometry = new THREE.BoxGeometry(0.5, 0.5, 0.5);
+    const material = new THREE.MeshPhongMaterial({
+        color: 0xff5050,
+        side: THREE.DoubleSide,
+    });
+
+    // const cube = new THREE.Mesh( geometry, material );
+    //scene.add( cube );
+
+    object = new THREE.Group();
+
+    const geometry = new THREE.BoxGeometry(0.15, 0.15, 0.15);
+
+    for (let z = - 2; z <= 2; ++z)
+        for (let y = - 2; y <= 2; ++y)
+            for (let x = - 2; x <= 2; ++x) {
+
+                const mesh = new THREE.Mesh(geometry, material);
+                mesh.position.set(5 + (x / 5), 1 + (y / 5), (z / 5) - 5);
+                mesh.castShadow = true;
+                object.add(mesh);
+
+            }
+
+    scene.add(object);
+
+    //Secondary storage's cylinder
+    const cylinderGeometry = new THREE.CylinderGeometry(1, 1, 2, 32);
+    const cylinderMaterial = new THREE.MeshPhongMaterial({ 
+        color: 0x00ff00,
+        side: THREE.DoubleSide });
+    let cylinder = new THREE.Mesh(cylinderGeometry, cylinderMaterial);
+    cylinder.position.set(0,0,0)
+    scene.add(cylinder);
+    console.log(cylinder)
+
+    const axesHelper = new THREE.AxesHelper(15);
+    scene.add(axesHelper);
     window.addEventListener('resize', onWindowResize);
     gui = new GUI({
         width: 500,
@@ -78,12 +142,10 @@ function init() {
 function start() {
     console.log(options)
     //GUI.toggleHide();
-    generateRelation()
-    createRuns()
+    //generateRelation()
+    //createRuns()
+    cameraMover.rotateToBuffer()
 }
-
-
-
 function generateRelation() {
     relation = []
     frames = []
@@ -160,7 +222,7 @@ function sortArrays(array) {
     values = mergeSort(values)
     var k = 1, arrays = []
     while (k * options.tuplesPerFrame < values.length) {
-        arrays.push(values.slice(options.tuplesPerFrame * (k-1), options.tuplesPerFrame * k))
+        arrays.push(values.slice(options.tuplesPerFrame * (k - 1), options.tuplesPerFrame * k))
         k++
     }
     return arrays
@@ -195,20 +257,12 @@ function mergeSort(array) {
 }
 
 
-
-
-
-
-
-
-
 function onWindowResize() {
     width = canvas.clientWidth * pixelRatio | 0;
     height = canvas.clientHeight * pixelRatio | 0;
     canvas = renderer.domElement;
     renderer.setSize(width, height, false);
-    camera.aspect = window.innerWidth / window.innerHeight;
-    camera.updateProjectionMatrix();
+    cameraMover.windowResize(window.innerWidth / window.innerHeight)
 
 }
 
@@ -216,4 +270,6 @@ function render() {
     renderer.render(scene, camera);
     requestAnimationFrame(render);
     stats.update();
+    cameraMover.update();
+
 }
