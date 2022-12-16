@@ -2,9 +2,13 @@ html,
 body {
     margin: 0;
     height: 100%;
-    background-color: #FFFFFF;
+    width:100%;
+    background-color: #9b9b9b;
     color: #fff;
     overscroll-behavior: none;
+    display:flex;
+    font-family: Arial, sans-serif;
+
 }
 .background{
     background-image: url(./gif/giphy.gif);
@@ -12,7 +16,72 @@ body {
     background-repeat: no-repeat;
 }
 #canvas {
-    width: 100%;
+    width: 90%;
     height: 100%;
     display: block;
+    border-right: black 2px solid;
+
+}
+.menu{
+    margin-top:auto;
+    margin-bottom: auto;
+    width:10%;
+    display: inline-block;
+    background-color: #9b9b9b;
+    border-top: black 2px solid;
+    border-bottom: black 2px solid;
+
+}
+.menuElement{
+    width:100%;
+    border-bottom: black 2px solid;
+    margin-top: 10%;
+    padding-bottom:10%;
+    display:inline-block;
+}
+.labelElement{
+    margin-left: 5%;
+    width: 95%;
+    color: black;
+    display: inline-block;
+}
+.label{
+    font-weight: bold;
+    display: block;
+}
+.value{
+    margin-left:auto;
+    margin-right:auto;
+    margin-top:2%;
+    margin-bottom:2%;
+    font-size: 20px;
+    color: black;
+    display: block;
+}
+.rangeLabel{
+    color: black;
+}
+.rangeElement{
+    width: 95%;
+    display: flex;
+    margin-left:5%
+}
+.button{
+    display: block;
+    width: 80%;
+    margin:auto;
+    margin-top:10%;
+    margin-bottom:10%;
+    border-radius: 16px;
+    border: solid black 2px;
+    background-color: #0446aa;
+    color: white;
+    padding: 14px 28px;
+    font-size: 30px;
+    cursor: pointer;
+    text-align: center;
+}
+.button:hover {
+    background-color: #ddd;
+    color: black;
 }

@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <title>Multipass Sorting Algorithm</title>
     <meta charset="utf-8">
@@ -7,8 +8,35 @@
     <link type="text/css" rel="stylesheet" href="index.css">
 
 </head>
+
 <body>
-    <canvas id="canvas" class = background></canvas>
+    <canvas id="canvas" class=background></canvas>
+    <div id="menu" class="menu">
+        <div class="menuElement">
+            <div class="labelElement">
+                <label for="freeFrames" class="label">Frames in the buffer:</label>
+                <a id="freeFramesOutput" class="value"></a>
+            </div>
+            <div class="rangeElement">
+                <a class="rangeLabel">3</a>
+                <input type="range" class="range" min="3" max="10" value="3" step="1.0" id="freeFrames">
+                <a class="rangeLabel">10</a>
+            </div>
+        </div>
+        <div class="menuElement">
+            <div class="labelElement">
+                <label for="pages" class="label">Pages in the Relation:</label>
+                <a id="pagesOutput" class="value"></a>
+            </div>
+            <div class="rangeElement">
+                <a class="rangeLabel">2</a>
+                <input type="range" class="range" min="2" max="50" value="2" step="1.0" id="pages">
+                <a class="rangeLabel">50</a>
+            </div>
+        </div>
+        <button class="button" id="start">Start</button>
+    </div>
     <script type="module" src="src/main.js"></script>
 </body>
+
 </html>

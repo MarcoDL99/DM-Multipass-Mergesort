@@ -4,23 +4,29 @@ import { GUI } from '../libs/human_interface/dat.gui.module.js';
 import Stats from '../libs/human_interface/stats.module.js';
 
 import { CameraMover } from './cameraMover.js';
-
-let canvas, camera, scene, renderer, pixelRatio, width, height, stats, gui, cameraMover;
+import { GUIHandler } from '../GUIHandler.js';
+let canvas, camera, scene, renderer, pixelRatio, width, height, stats, guiHandler, cameraMover;
 
 let options =
 {
-    frames: 100,          //Number of free frames in the buffer
-    tuplesPerFrame: 100,  //Number of tuples fitting one frame in the buffer
-    pages: 100,           //Number of pages composing the relation
-    tuples: 100000       //Number of tuples  of the relation
+    frames: 3,          //Number of free frames in the buffer
+    pages: 10,           //Number of pages composing the relation
 }
+let maxPerLine = 10
 
-let relation, frames
+let relation, frames, runs, currentFrames, currentFramesObject;
+let currentRun = 0;
+runs = [[]];
+let started = false;
+let tweenGroup = new TWEEN.Group();
+const size = 1.0
 
 init();
 render();
 
 function init() {
+    //GUIHandler
+    guiHandler = new GUIHandler(setOptions, start)
     //Container
     const container = document.createElement('div');
     document.body.appendChild(container);
@@ -47,7 +53,7 @@ function init() {
 
     //Scene, Lights, Object
     scene = new THREE.Scene();
-    //scene.background = new THREE.Color(0x505050);
+    scene.background = new THREE.Color(0x202020);
     scene.add(new THREE.AmbientLight(0xffffff, 0.5));
     const spotLight = new THREE.SpotLight(0xffffff, 0.6);
     spotLight.angle = Math.PI / 5;
@@ -61,7 +67,7 @@ function init() {
     //scene.add(spotLight);
 
     const dirLight = new THREE.DirectionalLight(0xffffff, 0.6);
-    dirLight.position.set(0, 2, 0);
+    dirLight.position.set(0, 3, 0);
     dirLight.castShadow = true;
     dirLight.shadow.camera.near = 1;
     dirLight.shadow.camera.far = 10;
@@ -74,188 +80,299 @@ function init() {
     dirLight.shadow.mapSize.width = 1024;
     dirLight.shadow.mapSize.height = 1024;
     scene.add(dirLight);
-    // Geometry
-
-    let object = new THREE.Group();
-
-    //const geometry = new THREE.BoxGeometry(0.5, 0.5, 0.5);
-    const material = new THREE.MeshPhongMaterial({
-        color: 0xff5050,
-        side: THREE.DoubleSide,
-    });
-
-    // const cube = new THREE.Mesh( geometry, material );
-    //scene.add( cube );
-
-    object = new THREE.Group();
-
-    const geometry = new THREE.BoxGeometry(0.15, 0.15, 0.15);
-
-    for (let z = - 2; z <= 2; ++z)
-        for (let y = - 2; y <= 2; ++y)
-            for (let x = - 2; x <= 2; ++x) {
-
-                const mesh = new THREE.Mesh(geometry, material);
-                mesh.position.set(5 + (x / 5), 1 + (y / 5), (z / 5) - 5);
-                mesh.castShadow = true;
-                object.add(mesh);
-
-            }
-
-    scene.add(object);
 
     //Secondary storage's cylinder
     const cylinderGeometry = new THREE.CylinderGeometry(1, 1, 2, 32);
-    const cylinderMaterial = new THREE.MeshPhongMaterial({ 
+    const cylinderMaterial = new THREE.MeshPhongMaterial({
         color: 0x00ff00,
-        side: THREE.DoubleSide });
+        side: THREE.DoubleSide
+    });
     let cylinder = new THREE.Mesh(cylinderGeometry, cylinderMaterial);
-    cylinder.position.set(0,0,0)
+    cylinder.position.set(0, 0, 0)
     scene.add(cylinder);
-    console.log(cylinder)
 
     const axesHelper = new THREE.AxesHelper(15);
     scene.add(axesHelper);
     window.addEventListener('resize', onWindowResize);
-    gui = new GUI({
-        width: 500,
-    });
-    let folder = gui.addFolder("Buffer Options")
-    folder.add(options, 'frames', 1.0, 100.0, 1.0).name("Number of free frames")
-    //    folder.add(options, 'tuplesPerFrame', 1.0, 100.0, 1.0).name("Tuples fiting in one frame")
-    folder.open()
-    folder = gui.addFolder("Relation Options")
 
-    folder.add(options, 'pages', 1.0, 100.0, 1.0).name("Number of pages")
-    folder.add(options, 'tuples', 1.0, 100000.0, 1.0).name("Total number of tuples in the relation")
-    folder.open()
-    var obj = {
-        start: function () {
-            start()
-        }
-    };
-
-    gui.add(obj, 'start').name("CLICK HERE TO START ANIMATION");
-    console.log(gui.__folders["Relation Options"])
 
 }
 function start() {
-    console.log(options)
-    //GUI.toggleHide();
-    //generateRelation()
-    //createRuns()
-    cameraMover.rotateToBuffer()
-}
-function generateRelation() {
-    relation = []
-    frames = []
-    let tuples = []
-    for (let i = 0; i < options.tuples; i++) {
-        tuples[i] = i
+    if (!started) {
+        started = true
+
+        //generateRelation()
+        //createRuns()
+        //cameraMover.rotateToBuffer()
+        createFrames()
+        createRelation()
     }
-    tuples = shuffle(tuples)
+    else {
+        movePagesToFrame(function () {
+            moveRelationToFrames((function () {
+                updateFrames()
+            }))
 
-    var k = 0, i = 0;
-    const tuplesPerPage = Math.ceil(options.tuples / options.pages);
-    const remainderFinalPage = options.tuples % options.pages
-    while (k < options.pages) {
-        relation[k] = []
-        while (i < (k + 1) * tuplesPerPage) {
+        })
 
-            if (!isNaN(tuples[i])) {
-                relation[k].push(tuples[i])
+    }
+
+}
+function updateFrames() {         //  create a loop function
+    setTimeout(function () {   //  call a 1s setTimeout when the loop is called
+        let index = Math.floor(Math.random() * (options.frames - 1));
+        console.log(options)
+        if (options.pages - options.frames <0) {
+            while (index < (options.frames - options.pages - 1)) {
+                index = Math.floor(Math.random() * (options.frames - 1));
             }
-            i++
         }
-        k++
-    }
-    console.log(relation)
-}
 
-function createRuns() { //Step 0
-    var i = 0, j = 0, k = 0, runs = [], tuples = []
-
-    while (i < options.pages) {
-        frames = []
-        j = 0
-        while (j < options.frames) {
-            frames[j] = []
-            if (relation[i]) {
-
-                for (var number of relation[i]) {
-                    frames[j].push(number)
+        currentFrames[index] += 0.1
+        currentFrames[currentFrames.length - 1] += 0.1
+        updateRuns(index)                  //  increment the counter
+        if (!checkRuns()) {           //  if the counter < 10, call the loop function
+            updateFrames();             //  ..  again which will trigger another 
+        }                      //  ..  setTimeout()
+        else {
+            if (currentFrames[currentFrames.length - 1] >= 0.95) {
+                moveOutput(function () {
+                    updateFrames()
                 }
-                //console.log(relation[i], frames[j])            
+                )
             }
-            i++
-            j++
+            else {
+                updateFrames()
+
+                console.log("ELSEE")
+            }
         }
-        runs[k] = sortArrays(frames)
-        k++
-    }
-    console.log(runs)
+    }, 150)
 }
 
-function shuffle(array) { //Fisher–Yates Shuffle. Source: https://bost.ocks.org/mike/shuffle/
-    var m = array.length, t, i;
 
-    // While there remain elements to shuffle…
-    while (m) {
-
-        // Pick a remaining element…
-        i = Math.floor(Math.random() * m--);
-
-        // And swap it with the current element.
-        t = array[m];
-        array[m] = array[i];
-        array[i] = t;
-    }
-
-    return array;
-}
-function sortArrays(array) {
-    var values = []
-    for (let i = 0; i < array.length; i++) {
-        values = values.concat(array[i])
-    }
-    console.log(values)
-    values = mergeSort(values)
-    var k = 1, arrays = []
-    while (k * options.tuplesPerFrame < values.length) {
-        arrays.push(values.slice(options.tuplesPerFrame * (k - 1), options.tuplesPerFrame * k))
-        k++
-    }
-    return arrays
-}
-function merge(left, right) {
-    let arr = []
-    // Break out of loop if any one of the array gets empty
-    while (left.length && right.length) {
-        // Pick the smaller among the smallest element of left and right sub arrays 
-        if (left[0] < right[0]) {
-            arr.push(left.shift())
-        } else {
-            arr.push(right.shift())
+function checkRuns() {
+    for (let i = 0; i < currentFrames.length; i++) {
+        if (currentFrames[i] >= 0.95) {
+            return true
         }
     }
-
-    // Concatenating the leftover elements
-    // (in case we didn't go through the entire left or right array)
-    return [...arr, ...left, ...right]
+    return false
 }
+function setOptions(frames, pages) {
+    options.frames = frames
+    options.pages = pages
+}
+function createFrames() {
+    frames = new THREE.Group();
 
-function mergeSort(array) {
-    const half = array.length / 2
+    const material = new THREE.MeshPhongMaterial({
+        color: 0x5050ff,
+        side: THREE.DoubleSide,
+    });
 
-    // Base case or terminating case
-    if (array.length < 2) {
-        return array
+    const geometry = new THREE.BoxGeometry(size, size, size);
+    for (let z = 0; z < options.frames - 1; z++) {
+
+        const mesh = new THREE.Mesh(geometry, material);
+        const edges = new THREE.LineSegments(new THREE.EdgesGeometry(geometry), new THREE.MeshPhongMaterial({
+            emissive: 0xffffff,
+            side: THREE.DoubleSide,
+
+        }));
+        mesh.add(edges)
+        mesh.position.set(0.0, 0.0, 2 + 1.5 * size * z);
+        mesh.castShadow = true;
+        frames.add(mesh);
+    }
+    let mesh = new THREE.Mesh(geometry, new THREE.MeshPhongMaterial({
+        color: 0xffae00,
+        side: THREE.DoubleSide,
+    }));
+    let edges = new THREE.LineSegments(new THREE.EdgesGeometry(geometry), new THREE.MeshPhongMaterial({
+        emissive: 0xffffff,
+        side: THREE.DoubleSide,
+
+    }));
+    mesh.add(edges)
+    mesh.position.set(0.0, 0.0, 2 + 1.5 * size * (options.frames - 1));
+    mesh.castShadow = true;
+    frames.add(mesh);
+    scene.add(frames);
+}
+function createRelation() {
+    let oldRelation;
+    for (let i = 0; i < scene.children.length; i++) {
+        if (scene.children[i].name == "relation") {
+            oldRelation = scene.children[i]
+        }
+    }
+    if (oldRelation) {
+        scene.remove(oldRelation)
+
     }
 
-    const left = array.splice(0, half)
-    return merge(mergeSort(left), mergeSort(array))
-}
+    relation = new THREE.Group();
 
+    const material = new THREE.MeshPhongMaterial({
+        color: 0x505050,
+        side: THREE.DoubleSide,
+    });
+
+    const geometry = new THREE.BoxGeometry(size, size, size);
+    let y = 7 + 1.25 * size;
+    let x = 0;
+    let middlePositions = []
+    let finalPositions = []
+    for (let count = 0; count < options.pages; count++) {
+        if (count % maxPerLine == 0) {
+            x = 0
+            y += -1.25 * size
+        }
+        const mesh = new THREE.Mesh(geometry, material);
+        const edges = new THREE.LineSegments(new THREE.EdgesGeometry(geometry), new THREE.MeshPhongMaterial({
+            emissive: 0xffffff,
+            side: THREE.DoubleSide,
+
+        }));
+        mesh.add(edges)
+        middlePositions.push(new THREE.Vector3(0.0, y, 0.0))
+        finalPositions.push(new THREE.Vector3(1.1 * size * (maxPerLine - x), y, 0.0))
+        // mesh.position.set(2 + 1.1 * size * x, y, 0);
+        mesh.position.set(0, 0, 0)
+        mesh.castShadow = true;
+        relation.add(mesh);
+        x++
+    }
+    let tweens1 = []
+    let maxtime = 0//1000
+    let time = maxtime / 2
+    for (let i = 0; i < relation.children.length; i++) {
+        tweens1.push(new TWEEN.Tween(relation.children[i].position, tweenGroup).to(middlePositions[i], time))
+    }
+    for (let i = 0; i < tweens1.length; i++) {
+        time = maxtime * ((maxPerLine - (i % maxPerLine)) / maxPerLine)
+        if (i < tweens1.length - 1) {
+            tweens1[i].chain(tweens1[i + 1])
+        }
+        tweens1[i].onComplete(() => {
+            let tween = new TWEEN.Tween(relation.children[i].position, tweenGroup).to(finalPositions[i], time)
+            tween.start()
+        })
+    }
+    tweens1[0].start()
+    relation.name = "relation"
+    scene.add(relation);
+}
+function moveRelationToFrames(callback) {
+    currentFramesObject = new THREE.Group();
+    const material = new THREE.MeshPhongMaterial({
+        color: 0x00ff00,
+        side: THREE.DoubleSide,
+    });
+
+    const geometry = new THREE.BoxGeometry(size, size, size);
+    for (let z = 0; z < options.frames - 1; z++) {
+        const mesh = new THREE.Mesh(geometry, material);
+        const edges = new THREE.LineSegments(new THREE.EdgesGeometry(geometry), new THREE.MeshPhongMaterial({
+            emissive: 0xffffff,
+            side: THREE.DoubleSide,
+
+        }));
+        mesh.add(edges)
+        mesh.position.set(0.0, (currentFrames[z] - 1.0) / 2, 2 + 1.5 * size * z);
+        mesh.scale.set(1, currentFrames[z], 1)
+        mesh.castShadow = true;
+        currentFramesObject.add(mesh);
+    }
+    let mesh = new THREE.Mesh(geometry, new THREE.MeshPhongMaterial({
+        color: 0xffffff,
+        side: THREE.DoubleSide,
+    }))
+    const edges = new THREE.LineSegments(new THREE.EdgesGeometry(geometry), new THREE.MeshPhongMaterial({
+        emissive: 0xffffff,
+        side: THREE.DoubleSide,
+
+    }));
+    mesh.add(edges)
+    mesh.position.set(0.0, 0.0, 2 + 1.5 * size * (options.frames - 1));
+    mesh.scale.set(1, currentFrames[currentFrames.length - 1], 1)
+    mesh.castShadow = true;
+    currentFramesObject.add(mesh);
+    scene.add(currentFramesObject);
+    callback()
+}
+function updateRuns(index) {
+    currentFramesObject.children[index].scale.set(1, currentFrames[index], 1)
+    currentFramesObject.children[index].position.set(0.0, (currentFrames[index] - 1.0) / 2, 2 + 1.5 * size * index);
+
+    currentFramesObject.children[options.frames - 1].scale.set(1, currentFrames[currentFrames.length - 1], 1)
+    currentFramesObject.children[options.frames - 1].position.set(0.0, (currentFrames[currentFrames.length - 1] - 1.0) / 2, 2 + 1.5 * size * (options.frames - 1));
+
+}
+function movePagesToFrame(callback) {
+    let tweens = []
+    let time = 500
+    currentFrames = []
+    for (let i = 0; i < options.frames; i++) {
+        currentFrames.push(0)
+    }
+    for (let i = 0; i < options.frames - 1 && i < options.pages; i++) {
+        tweens.push(new TWEEN.Tween(relation.children[relation.children.length - 1 - i].position, tweenGroup).to(new THREE.Vector3(frames.children[i].position.x, relation.children[relation.children.length - 1 - i].position.y, 0), time))
+    }
+    for (let i = 0; i < options.frames - 1 && i < options.pages; i++) {
+        if (i < tweens.length - 1) {
+            tweens[i].chain(tweens[i + 1])
+        }
+        tweens[i].onComplete(() => {
+            let tween = new TWEEN.Tween(relation.children[relation.children.length - 1 - i].position, tweenGroup).to(new THREE.Vector3(frames.children[frames.children.length - 2 - i].position.x, relation.children[relation.children.length - 1 - i].position.y, frames.children[frames.children.length - 2 - i].position.z), time)
+            tween.onComplete(() => {
+                let tween2 = new TWEEN.Tween(relation.children[relation.children.length - 1 - i].position, tweenGroup).to(frames.children[frames.children.length - 2 - i].position, time)
+                if (!((i + 1) < options.frames - 1 && (i + 1) < options.pages)) {
+                    tween2.onComplete(() => {
+                        callback()
+                    })
+                }
+                tween2.start()
+            })
+            tween.start()
+        })
+    }
+
+    tweens[0].start()
+}
+function moveOutput(callback) {
+    let time = 1000
+    if (runs[runs.length - 1].length == options.frames - 1) {
+        runs.push([])
+    }
+    let finalX = 1.1 * size * (maxPerLine - (runs[runs.length - 1]).length)
+    let finalY = 7 + 1.25 * size
+    let finalZ = 18
+
+
+    for (let i = 0; i < runs.length; i++) {
+        if (runs[i].length == options.frames - 1) {
+            console.log(i, runs[i])
+            finalY += -1.25 * size
+        }
+    }
+    runs[runs.length - 1].push(currentFramesObject.children[currentFramesObject.children.length - 1].clone())
+    scene.add(runs[runs.length - 1][(runs[runs.length - 1]).length - 1])
+    let tween = new TWEEN.Tween(runs[runs.length - 1][(runs[runs.length - 1]).length - 1].position, tweenGroup).to(new THREE.Vector3(runs[runs.length - 1][(runs[runs.length - 1]).length - 1].position.x, finalY, runs[runs.length - 1][(runs[runs.length - 1]).length - 1].position.z), time)
+
+    tween.onStart(() => {
+        currentFrames[currentFrames.length - 1] = 0
+        currentFramesObject.children[currentFramesObject.children.length - 1].scale.set(1, currentFrames[currentFrames.length - 1], 1)
+        callback()
+    })
+    let tween2 = new TWEEN.Tween(runs[runs.length - 1][(runs[runs.length - 1]).length - 1].position, tweenGroup).to(new THREE.Vector3(runs[runs.length - 1][(runs[runs.length - 1]).length - 1].position.x, finalY, finalZ), time)
+
+    let tween3 = new TWEEN.Tween(runs[runs.length - 1][(runs[runs.length - 1]).length - 1].position, tweenGroup).to(new THREE.Vector3(finalX, finalY, finalZ), time)
+    tween.chain(tween2)
+    tween2.chain(tween3)
+    tween.start()
+}
 
 function onWindowResize() {
     width = canvas.clientWidth * pixelRatio | 0;
@@ -271,5 +388,5 @@ function render() {
     requestAnimationFrame(render);
     stats.update();
     cameraMover.update();
-
+    tweenGroup.update()
 }

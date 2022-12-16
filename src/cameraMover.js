@@ -7,8 +7,10 @@ class CameraMover {
     constructor(camera, domElement) {
         this.camera = camera
         this.domElement = domElement
-        this.camera.position.set(8, 2, 15);
-        this.camera.rotation.set(0.0,0.0,0.0)
+        //this.camera.position.set(7, 3.5, 15);
+        this.camera.position.set(-15, 3.5, 8);
+
+        this.camera.rotation.set(0.0, -1.57, 0.0)
         console.log(this.camera)
         // CONTROLS ------------------------------------------------------------------
         //this.controls = new OrbitControls(camera, domElement);
@@ -17,7 +19,7 @@ class CameraMover {
         //this.controls.target.set(0, 1, 0);
         //this.controls.update();
 
-        this.tweenGroup=new TWEEN.Group();
+        this.tweenGroup = new TWEEN.Group();
 
     }
 
@@ -34,7 +36,7 @@ class CameraMover {
     rotateToBuffer() {
         console.log(this.camera)
         let tween = new TWEEN.Tween(this.camera.rotation, this.tweenGroup).to(new THREE.Vector3(0.0, 0.0, 0.0), 1000);
-        tween.onComplete(() =>{
+        tween.onComplete(() => {
             console.log(this.camera)
         })
         tween.start()
