@@ -15,10 +15,12 @@ let options =
 let maxPerLine = 10
 let maxPerColumn = 5
 let counter = 0
+let maxRunLength = 0
 let relation, frames, runs, currentFrames, currentFramesObject, currentRunsObject;
 let currentRun = 0;
+let currentRuns = []
 runs = [[]];
-let newruns = [[]]
+let newruns = []
 
 let started = false;
 let tweenGroup = new TWEEN.Group();
@@ -49,6 +51,7 @@ function createFrames() {
     const material = new THREE.MeshPhongMaterial({
         color: 0x5050ff,
         side: THREE.DoubleSide,
+
     });
 
     const geometry = new THREE.BoxGeometry(size, size, size);
@@ -69,17 +72,6 @@ function createFrames() {
     scene.add(frames);
 }
 function createRelation() {
-    let oldRelation;
-    for (let i = 0; i < scene.children.length; i++) {
-        if (scene.children[i].name == "relation") {
-            oldRelation = scene.children[i]
-        }
-    }
-    if (oldRelation) {
-        scene.remove(oldRelation)
-
-    }
-
     relation = new THREE.Group();
 
     const material = new THREE.MeshPhongMaterial({
@@ -113,8 +105,11 @@ function createRelation() {
         relation.add(mesh);
         x++
     }
+    relation.name = "relation"
+    scene.add(relation);
+
     let tweens1 = []
-    let maxtime = 0//1000
+    let maxtime = 0
     let time = maxtime / 2
     for (let i = 0; i < relation.children.length; i++) {
         tweens1.push(new TWEEN.Tween(relation.children[i].position, tweenGroup).to(middlePositions[i], time))
@@ -127,11 +122,10 @@ function createRelation() {
         tweens1[i].onComplete(() => {
             let tween = new TWEEN.Tween(relation.children[i].position, tweenGroup).to(finalPositions[i], time)
             tween.start()
+
         })
     }
     tweens1[0].start()
-    relation.name = "relation"
-    scene.add(relation);
 }
 
 
@@ -186,8 +180,11 @@ function readRelation() {         //STEP 0
                 scene.remove(relation)
 
                 if (runs.length > 1) {
+
                     //Go to next step
+
                     currentFrames = []
+                    options.pages = guiHandler.pagesSlider.value
                     let tweens = []
                     for (let i = 0; i < runs.length; i++) {
                         for (let j = 0; j < runs[i].length; j++) {
@@ -195,13 +192,34 @@ function readRelation() {         //STEP 0
                         }
                     }
                     tweens[tweens.length - 1].onComplete(() => {
-                        moveRunsToFrame(function () {
-                            setupStepI(function () {
-                                currentRun = 0
-                                createRunsStepI(function () {
-                                    updateFrames()
-                                })
-                            })
+
+                        for (let i = 0; i < runs.length; i++) {
+
+                            if (runs[i].length == 0) {
+                                runs.pop() //This is necessary as the last element of the runs array wil be empty when completing the step 0
+                            }
+                        }
+                        newruns.push([])
+                        currentFrames = []      //This is the The setupStepI function
+                        for (let i = 0; i < options.frames; i++) {
+                            currentFrames.push(0)
+                        }
+
+                        frames.children[frames.children.length - 1].material = new THREE.MeshPhongMaterial({
+                            color: 0x9b32a8,
+                            side: THREE.DoubleSide,
+                        })
+                        for (let i = 0; i < currentFramesObject.children.length; i++) {
+                            currentFramesObject.children[i].scale.set(1, 0, 1)
+                            currentFramesObject.children[i].position.set(0.0, -0.5, 2 + 1.5 * size * i);
+                        }
+                        currentFramesObject.children[currentFramesObject.children.length - 1].material = new THREE.MeshPhongMaterial({
+                            color: 0xff3030,
+                            side: THREE.DoubleSide,
+
+                        })
+                        moveRunsToFrame(function () {       //The setupStepI() has explicitly been done 
+                            sortRuns()
                         })
                     })
                     for (let i = 0; i < tweens.length; i++) {
@@ -219,7 +237,9 @@ function readRelation() {         //STEP 0
                 }
 
                 scene.remove(currentFramesObject)
-                start()
+                movePagesToFrame(function () {
+                    setupStep0()
+                })
             }
         }
         else {
@@ -227,7 +247,6 @@ function readRelation() {         //STEP 0
                 index = Math.floor(Math.random() * (options.frames));
             }
             currentRun++
-            counter++
             currentFrames[index] += 0.1
             currentFramesObject.children[index].scale.set(1, currentFrames[index], 1)
             currentFramesObject.children[index].position.set(0.0, (currentFrames[index] - 1.0) / 2, 2 + 1.5 * size * index);
@@ -246,10 +265,21 @@ function readRelation() {         //STEP 0
                 finalY += -1.25 * size
             }
             if (currentRun == 1) {
-                const material = new THREE.MeshPhongMaterial({
-                    color: 0xffffff,
-                    side: THREE.DoubleSide,
-                });
+                counter++
+
+                if (counter > 1) {
+                    counter = 0;
+                    var material = new THREE.MeshPhongMaterial({
+                        color: 0xffff00,
+                        side: THREE.DoubleSide,
+                    })
+                }
+                else {
+                    var material = new THREE.MeshPhongMaterial({
+                        color: 0xffffff,
+                        side: THREE.DoubleSide,
+                    })
+                }
 
                 const geometry = new THREE.BoxGeometry(size, size, size);
                 const mesh = new THREE.Mesh(geometry, material);
@@ -280,11 +310,11 @@ function readRelation() {         //STEP 0
             }
             readRelation()
         }
-    }, 10)
+    }, 100)
 }
 function movePagesToFrame(callback) {
     let tweens = []
-    let time = 100
+    let time = 10
     currentFrames = []
     for (let i = 0; i < options.frames; i++) {
         currentFrames.push(0)
@@ -314,31 +344,325 @@ function movePagesToFrame(callback) {
 
 
 }
-// STEP I \\
 
-function moveRunsToFrame(callback) {
-    console.log("SCENE", scene)
-    let tweens = []
-    let time = 100
-    currentFrames = []
-    console.log(options)
+
+
+
+
+
+// // STEP I \\
+
+
+
+
+
+
+function setupStepI() {
+    currentFrames = []      //This is the The setupStepI function
+    newruns.push([])
     for (let i = 0; i < options.frames; i++) {
         currentFrames.push(0)
     }
+    for (let i = 0; i < runs.length; i++) {
 
+        if (runs[i].length == 0) {
+            runs.pop() //This is necessary as the last element of the runs array wil be empty when completing the step 0
+        }
+    }
+    for (let i = 0; i < currentFramesObject.children.length; i++) {
+        currentFramesObject.children[i].scale.set(1, 0, 1)
+        currentFramesObject.children[i].position.set(0.0, -0.5, 2 + 1.5 * size * i);
+    }
+    if (counter > 1) {
+        counter = 0
+
+        currentFramesObject.children[currentFramesObject.children.length - 1].material = new THREE.MeshPhongMaterial({
+            color: 0xff3030,
+            side: THREE.DoubleSide,
+        })
+    }
+    else {
+        currentFramesObject.children[currentFramesObject.children.length - 1].material = new THREE.MeshPhongMaterial({
+            color: 0xff9900,
+            side: THREE.DoubleSide,
+
+        })
+    }
+    // currentFramesObject.children[currentFramesObject.children.length - 1].material = new THREE.MeshPhongMaterial({
+    //     color: 0xff3030,
+    //     side: THREE.DoubleSide,
+    // })
+    //sortRuns()
+}
+
+function sortRuns() {
+    setTimeout(function () {   //  call a 0.15s setTimeout when the loop is called
+        // Analyze the current set of runs: This is simulated by choosing at random one of the runs in the frames
+        let index = Math.floor(Math.random() * (options.frames - 1));           //Find a valid index frame associated to a non completely analyzed run.
+        while (index < (options.frames - runs.length - 1) || currentFrames[index] > 0.95) {    //  Value is only > 0.95 if the frame is associated to a fully analyzed run
+            index = Math.floor(Math.random() * (options.frames - 1));
+        }
+        currentRun++            //Increase all the various counters
+        currentFrames[index] += 0.1
+        currentFrames[currentFrames.length - 1] += 0.1
+        currentFramesObject.children[index].scale.set(1, currentFrames[index], 1)
+        currentFramesObject.children[index].position.set(-0.1, (currentFrames[index] - 1.0) / 2, 2 + 1.5 * size * index);
+
+        currentFramesObject.children[options.frames - 1].scale.set(1, currentFrames[currentFrames.length - 1], 1)
+        currentFramesObject.children[options.frames - 1].position.set(-0.1, (currentFrames[currentFrames.length - 1] - 1.0) / 2, 2 + 1.5 * size * (options.frames - 1));
+
+        let fullFrames = 0;
+        for (let i = 0; i < options.frames; i++) {
+            if (currentFrames[i] > 0.95) {
+                fullFrames++
+            }
+        }
+        console.log(fullFrames, currentFrames, runs)
+        if ((fullFrames == options.frames || fullFrames > runs.length)) { // If all frames (or the frames containing a run) are full then it means the new run has been completed. Now we need to see if..
+            for (let i = 0; i < options.frames; i++) {                    //We're done, if we need to iterate again on the current runs or if we need to iterate again on the new runs
+
+                if (i >= options.frames - runs.length - 1) {
+                    currentFrames[i] = 1.0
+                    currentFramesObject.children[i].scale.set(1, currentFrames[i], 1)
+                    currentFramesObject.children[i].position.set(0.0, (currentFrames[i] - 1.0) / 2, 2 + 1.5 * size * i);
+                }
+            }
+            for (let i = fullFrames - 2; i >= 0; i--) {
+                if (runs[i][0]) {
+                    console.log("Shouldn't we have removed these already?", runs[i])
+
+                    if (runs[i].length == 1) {
+                        scene.remove(runs[i][0])  //Since they're all full, there is only one block in each run, which we now remove from the scene
+                        runs.splice(i, 1)
+
+                    }
+                }
+            }
+            moveOutput(function () {      //Move the last block of output
+                console.log(runs)
+
+                //runs.slice(Math.min(runs.length - 1, options.frames - runs.length - 1)) //Slice the runs array. If it is longer than the # of frames, we'll iterate again, otherwise, we're done for the current runs.
+                console.log(runs)
+                if (runs.length == 0) {     //It means all the current runs have been analyzed and we're done for the current runs
+
+                    if (newruns.length > 1) { //If we're done AND we've created more than one new run, we need to repeat the step I
+                        console.log(newruns)
+                        // for (let i=0;i<runs.length; i++){
+                        //     scene.remove(runs[i][0])
+                        // }
+                        runs = []
+                        const materials = [new THREE.MeshPhongMaterial({
+                            color: 0xffffff,
+                            side: THREE.DoubleSide,
+                        }), new THREE.MeshPhongMaterial({
+                            color: 0xffff00,
+                            side: THREE.DoubleSide,
+                        })]
+                        for (let i = 0; i < newruns.length; i++) {   //Setup the newruns for the next iteration of step I
+                            runs.push([])
+                            for (let j = newruns[i].length - 1; j >= 0; j--) {    //We need to flip them on the X axis
+                                newruns[i][j].material = materials[j%2]
+                                runs[i].push(newruns[i][j])
+                            }
+                        }
+
+                        newruns = [];
+                        console.log(runs, newruns)
+                        let tweens = []             //Move the newruns to the left side of the screen
+                        for (let i = 0; i < runs.length; i++) {
+                            for (let j = 0; j < runs[i].length; j++) {
+                                tweens.push(new TWEEN.Tween(runs[i][j].position, tweenGroup).to(new THREE.Vector3(runs[i][j].position.x, runs[i][j].position.y, runs[i][j].position.z - 18 + 2 * size), 500))
+                            }
+                        }
+                        tweens[tweens.length - 1].onComplete(() => {
+                            if (runs[runs.length - 1].length == 0) {
+                                runs.pop() //This is necessary as the last element of the runs array wil be empty when completing the step I
+                            }
+
+                            currentFrames = []      //Reset the counters
+                            for (let i = 0; i < options.frames; i++) {
+                                currentFrames.push(0)
+                            }
+
+                            frames.children[frames.children.length - 1].material = new THREE.MeshPhongMaterial({
+                                color: 0x9b32a8,
+                                side: THREE.DoubleSide,
+                            })
+                            setupStepI()
+                            moveRunsToFrame(function () {           //Iterate step I
+                                sortRuns()
+                            })
+                        })
+                        for (let i = 0; i < tweens.length; i++) {       // Actual command which starts the next iteration
+                            tweens[i].start()
+                        }
+                    }
+                    else { //If newruns has length 1 then we're done
+                        scene.remove(currentFramesObject)
+                        for (let i = 0; i < runs.length; i++) {
+                            for (let j = 0; j < runs[i].length; j++) {
+                                scene.remove(runs[i][j])
+                            }
+                        }
+                        console.log("Animation is fully completed")
+                    }
+                }
+                else {  //If runs length is still more than 0, it means we have more runs to analyze in the current iteration, so we restart the analysis but without moving newruns to runs
+                    counter = 0 //Just so the new run starts with a red bloc
+                    setupStepI()
+                    moveRunsToFrame(function () {           //Iterate step I
+                        sortRuns()
+                    })
+                }
+            })
+        }
+        else {  //If at least one frame is not full yet, we need to check if there is any full one, and we also need to check if the last one is full
+            if (currentFrames[currentFrames.length - 1] > 0.95) {   //If the output frame is full, we need to copy it and move it
+
+                moveOutput(function () {
+                    currentFrames[currentFrames.length - 1] = 0
+                    currentFramesObject.children[currentFramesObject.children.length - 1].scale.set(1, 0, 1)
+                    currentFramesObject.children[currentFramesObject.children.length - 1].position.set(0.0, - 0.5, 2 + 1.5 * size * (currentFramesObject.children.length - 1));
+                    counter++
+                    if (counter > 1) {
+                        counter = 0
+                        currentFramesObject.children[currentFramesObject.children.length - 1].material = new THREE.MeshPhongMaterial({
+                            color: 0xff3030,
+                            side: THREE.DoubleSide,
+
+                        })
+                    }
+                    else {
+                        currentFramesObject.children[currentFramesObject.children.length - 1].material = new THREE.MeshPhongMaterial({
+                            color: 0xff9900,
+                            side: THREE.DoubleSide,
+
+                        })
+                    }
+
+                    let runIndex
+                    let fullFrameIndex = findFullFrameIndex()   //Check if there is a full "reading" frame
+                    if (fullFrameIndex >= 0) {              //If we find a full frame
+                        runIndex = fullFrameIndex - (options.frames - 1 - Math.min(runs.length, options.frames - 1))
+
+                        console.log(runs, runIndex, frames, fullFrameIndex)
+                        if (currentFrames[fullFrameIndex] > 0.95) {
+                            if (runs[runIndex.length == 0]) {
+                                // If the full corresponds to a run we've completely analyzed, we do nothing 
+                            }
+                            if (runs[runIndex.length == 1]) { // If the block we've just finished analyzing is the last one of the run, we don't have another block to load, so we just clean up
+                                scene.remove(runs[runIndex][runs[runIndex].length - 1]); //Remove the block from the scene
+                                runs[runIndex].pop()            //Remove the block from the runs array. This will make runs[runIndex] an empty array.
+                            }
+
+                            if (runs[runIndex].length > 1) {      //If there are still blocks to analyze from this run, we clean the current one and then load another one
+                                scene.remove(runs[runIndex][runs[runIndex].length - 1]); //Remove the block from the scene
+                                runs[runIndex].pop()            //Clean the current block
+                                currentFramesObject.children[fullFrameIndex].scale.set(1, 0, 1)     //Reset the counter related to the frame
+                                currentFrames[fullFrameIndex] = 0                                   //Reset the counter related to the frame
+
+                                let time = 1000                      //Load a new block from the run
+                                let tween = new TWEEN.Tween(runs[runIndex][runs[runIndex].length - 1].position, tweenGroup).to(new THREE.Vector3(frames.children[fullFrameIndex].position.x, runs[runIndex][runs[runIndex].length - 1].position.y, 0), time)
+                                let tween2 = new TWEEN.Tween(runs[runIndex][runs[runIndex].length - 1].position, tweenGroup).to(new THREE.Vector3(frames.children[fullFrameIndex].position.x, runs[runIndex][runs[runIndex].length - 1].position.y, frames.children[fullFrameIndex].position.z), time)
+                                let tween3 = new TWEEN.Tween(runs[runIndex][runs[runIndex].length - 1].position, tweenGroup).to(frames.children[fullFrameIndex].position, time)
+                                tween3.onComplete(function () {
+                                    sortRuns()
+                                })
+                                tween.chain(tween2)
+                                tween2.chain(tween3)
+                                tween.start()
+                            }
+                        }
+                    }
+                    else {
+                        sortRuns()      //recall the function
+                    }
+                })
+            }
+            else { //If the output frame is not full
+                let runIndex
+
+                let fullFrameIndex = findFullFrameIndex()   //Check if there is a full "reading" frame associated to a non completely analyzed run
+                if (fullFrameIndex >= 0) {              //If we find a full frame
+
+                    runIndex = fullFrameIndex - (options.frames - 1 - Math.min(runs.length, options.frames - 1))
+
+                    console.log(runs, runIndex, frames, fullFrameIndex)
+                    if (currentFrames[fullFrameIndex] > 0.95) {
+                        if (runs[runIndex.length == 0]) {
+                            // If the full corresponds to a run we've completely analyzed, we do nothing 
+                        }
+                        if (runs[runIndex.length == 1]) { // If the block we've just finished analyzing is the last one of the run, we don't have another block to load, so we just clean up
+                            scene.remove(runs[runIndex][runs[runIndex].length - 1]); //Remove the block from the scene
+                            runs[runIndex].pop()            //Remove the block from the runs array. This will make runs[runIndex] an empty array.
+                        }
+
+                        if (runs[runIndex].length > 1) {      //If there are still blocks to analyze from this run, we clean the current one and then load another one
+                            scene.remove(runs[runIndex][runs[runIndex].length - 1]); //Remove the block from the scene
+                            runs[runIndex].pop()            //Clean the current block
+                            currentFramesObject.children[fullFrameIndex].scale.set(1, 0, 1)     //Reset the counter related to the frame
+                            currentFrames[fullFrameIndex] = 0                                   //Reset the counter related to the frame
+
+                            let time = 1000                      //Load a new block from the run
+                            let tween = new TWEEN.Tween(runs[runIndex][runs[runIndex].length - 1].position, tweenGroup).to(new THREE.Vector3(frames.children[fullFrameIndex].position.x, runs[runIndex][runs[runIndex].length - 1].position.y, 0), time)
+                            let tween2 = new TWEEN.Tween(runs[runIndex][runs[runIndex].length - 1].position, tweenGroup).to(new THREE.Vector3(frames.children[fullFrameIndex].position.x, runs[runIndex][runs[runIndex].length - 1].position.y, frames.children[fullFrameIndex].position.z), time)
+                            let tween3 = new TWEEN.Tween(runs[runIndex][runs[runIndex].length - 1].position, tweenGroup).to(frames.children[fullFrameIndex].position, time)
+                            tween3.onComplete(function () {
+                                sortRuns()
+                            })
+                            tween.chain(tween2)
+                            tween2.chain(tween3)
+                            tween.start()
+                        }
+                    }
+                }
+                else {
+                    sortRuns()      //recall the function
+
+                }
+            }
+
+        }
+    }
+        , 100)
+}
+function findFullFrameIndex() {
+    for (let i = options.frames - 1 - runs.length; i < options.frames - 1; i++) { //Check if there is a full "reading" frame
+        if (currentFrames[i] > 0.95 && runs[i - (options.frames - 1 - Math.min(runs.length, options.frames - 1))].length > 1) {
+
+            return i
+        }
+    }
+    return -1
+}
+
+function checkIfRunsStillLongerThanOne() {
+    for (let i = 0; i < runs.length; i++) {
+        if (runs[i].length > 1) {
+            return true
+        }
+    }
+    return false
+}
+
+
+function moveRunsToFrame(callback) {
+    let tweens = []
+    let time = 500
 
     for (let i = 0; i < options.frames - 1 && i < runs.length; i++) {
         tweens.push(new TWEEN.Tween(runs[i][runs[i].length - 1].position, tweenGroup).to(new THREE.Vector3(frames.children[i].position.x, runs[i][runs[i].length - 1].position.y, 0), time))
     }
     for (let i = 0; i < options.frames - 1 && i < runs.length; i++) {
+        currentRuns.push(false)
         if (i < tweens.length - 1) {
             tweens[i].chain(tweens[i + 1])
         }
         tweens[i].onComplete(() => {
-            let tween = new TWEEN.Tween(runs[i][runs[i].length - 1].position, tweenGroup).to(new THREE.Vector3(frames.children[frames.children.length - 2 - i].position.x, runs[i][runs[i].length - 1].position.y, frames.children[frames.children.length - 2 - i].position.z), time)
+            let tween = new TWEEN.Tween(runs[i][runs[i].length - 1].position, tweenGroup).to(new THREE.Vector3(frames.children[(options.frames - Math.min(runs.length, options.frames - 1) - 1) + i].position.x, runs[i][runs[i].length - 1].position.y, frames.children[(options.frames - Math.min(runs.length, options.frames - 1) - 1) + i].position.z), time)
             tween.onComplete(() => {
-                let tween2 = new TWEEN.Tween(runs[i][runs[i].length - 1].position, tweenGroup).to(frames.children[frames.children.length - 2 - i].position, time)
-                if (!((i + 1) < options.frames && (i + 1) < options.pages)) {
+                let tween2 = new TWEEN.Tween(runs[i][runs[i].length - 1].position, tweenGroup).to(frames.children[(options.frames - Math.min(runs.length, options.frames - 1) - 1) + i].position, time)
+                if (!((i + 1) < options.frames - 1 && (i + 1) < runs.length)) {
                     tween2.onComplete(() => {
                         callback()
                     })
@@ -351,151 +675,38 @@ function moveRunsToFrame(callback) {
     tweens[0].start()
 }
 
-function setupStepI(callback) {  // Preparation to Step i 
-
-    for (let i = 0; i < currentFramesObject.children.length; i++) {
-        currentFrames.push(0)
-        currentFramesObject.children[i].scale.set(1, 0, 1)
-        currentFramesObject.children[i].position.set(0.0, -0.5, 2 + 1.5 * size * i);
-    }
-
-    currentFramesObject.children[currentFramesObject.children.length - 1].material = new THREE.MeshPhongMaterial({
-        color: 0xff3030,
-        side: THREE.DoubleSide,
-    })
-
-    callback()
-}
-
-
-function updateRuns(index) {
-    currentFramesObject.children[index].scale.set(1, currentFrames[index], 1)
-    currentFramesObject.children[index].position.set(0.0, (currentFrames[index] - 1.0) / 2, 2 + 1.5 * size * index);
-
-    currentFramesObject.children[options.frames - 1].scale.set(1, currentFrames[currentFrames.length - 1], 1)
-    currentFramesObject.children[options.frames - 1].position.set(0.0, (currentFrames[currentFrames.length - 1] - 1.0) / 2, 2 + 1.5 * size * (options.frames - 1));
-
-}
-/*
 function moveOutput(callback) {
-    let time = 1000
-    //if (newruns[newruns.length - 1].length == options.frames - 1) {
-    //    newruns.push([])
-    //}
-    let finalX = 1.1 * size * (maxPerLine - (runs[runs.length - 1]).length)
-    let finalY = 7 + 1.25 * size
-    let finalZ = 18
-
-
-    for (let i = 0; i < newruns.length; i++) {
-        finalY += -1.25 * size
-
-    }
-    newruns[newrunsruns.length - 1].push(currentFramesObject.children[currentFramesObject.children.length - 1].clone())
-    scene.add(runs[runs.length - 1][(runs[runs.length - 1]).length - 1])
-    let tween = new TWEEN.Tween(runs[runs.length - 1][(runs[runs.length - 1]).length - 1].position, tweenGroup).to(new THREE.Vector3(runs[runs.length - 1][(runs[runs.length - 1]).length - 1].position.x, finalY, runs[runs.length - 1][(runs[runs.length - 1]).length - 1].position.z), time)
-
-    tween.onStart(() => {
-        currentFrames[currentFrames.length - 1] = 0
-        currentFramesObject.children[currentFramesObject.children.length - 1].scale.set(1, currentFrames[currentFrames.length - 1], 1)
-        callback()
-    })
-    let tween2 = new TWEEN.Tween(runs[runs.length - 1][(runs[runs.length - 1]).length - 1].position, tweenGroup).to(new THREE.Vector3(runs[runs.length - 1][(runs[runs.length - 1]).length - 1].position.x, finalY, finalZ), time)
-
-    let tween3 = new TWEEN.Tween(runs[runs.length - 1][(runs[runs.length - 1]).length - 1].position, tweenGroup).to(new THREE.Vector3(finalX, finalY, finalZ), time)
-    tween.chain(tween2)
-    tween2.chain(tween3)
-    tween.start()
-}
-
-*/
-
-function createRunsStepI(callback) {
-    let time = 1000
+    console.log("moveOutput")
+    let time = 500
     let finalX = 1.1 * size * (newruns[newruns.length - 1].length)
     let finalY = 7 + 1.25 * size
-    let finalZ = 16
+    let finalZ = 17
 
 
     for (let i = 0; i < newruns.length; i++) {
+        if (i % maxPerColumn == 0) {
+            finalZ += - 1.25 * size
+            finalY = 7 + 1.25 * size
+        }
         finalY += -1.25 * size
+
     }
-
-    if (currentRun == 1) {
-        const material = new THREE.MeshPhongMaterial({
-            color: 0x7732a8,
-            side: THREE.DoubleSide,
-        });
-
-        const geometry = new THREE.BoxGeometry(size, size, size);
-        const mesh = new THREE.Mesh(geometry, material);
-        const edges = new THREE.LineSegments(new THREE.EdgesGeometry(geometry), new THREE.MeshPhongMaterial({
-            color: 0x000000,
-            emissive: 0x000000,
-            side: THREE.DoubleSide,
-
-        }));
-        mesh.add(edges)
-        mesh.position.set(finalX - 1.0 / 2, finalY, finalZ);
-        mesh.scale.set(1, 1.0, 1)
-        newruns[newruns.length - 1].push(mesh)
-        scene.add(mesh)
-    }
-    else if (currentRun == 11) {
-        runs[runs.length - 1][runs[runs.length - 1].length - 1].scale.set(1.0, 1.0, 1.0)
-        runs[runs.length - 1][runs[runs.length - 1].length - 1].position.set(finalX, finalY, finalZ)
-        currentRun = 0
-    }
-    else {
-        console.log(runs, currentRun)
-        runs[runs.length - 1][runs[runs.length - 1].length - 1].scale.set(0.1 * currentRun, 1.0, 1.0)
-        runs[runs.length - 1][runs[runs.length - 1].length - 1].position.set(runs[runs.length - 1][runs[runs.length - 1].length - 1].position.x - 0.05, finalY, finalZ)
-    }
-
-    //callback()
-}
+    newruns[newruns.length - 1].push(currentFramesObject.children[currentFramesObject.children.length - 1].clone())
+    scene.add(newruns[newruns.length - 1][(newruns[newruns.length - 1]).length - 1])
+    let tween = new TWEEN.Tween(newruns[newruns.length - 1][(newruns[newruns.length - 1]).length - 1].position, tweenGroup).to(new THREE.Vector3(newruns[newruns.length - 1][(newruns[newruns.length - 1]).length - 1].position.x, finalY, newruns[newruns.length - 1][(newruns[newruns.length - 1]).length - 1].position.z), time)
 
 
+    let tween2 = new TWEEN.Tween(newruns[newruns.length - 1][(newruns[newruns.length - 1]).length - 1].position, tweenGroup).to(new THREE.Vector3(finalX, finalY, newruns[newruns.length - 1][(newruns[newruns.length - 1]).length - 1].position.z), time)
 
-
-function checkRuns() {
-    for (let i = 0; i < currentFrames.length; i++) {
-        if (currentFrames[i] >= 0.95) {
-            return true
-        }
-    }
-    return false
-}
-
-function updateFrames() {         //  create a loop function
-    setTimeout(function () {   //  call a 1s setTimeout when the loop is called
-        let index = Math.floor(Math.random() * (options.frames - 1));
-        if (options.pages - options.frames < 0) {
-            while (index < (options.frames - options.pages - 1)) {
-                index = Math.floor(Math.random() * (options.frames - 1));
-            }
-        }
-
-        currentFrames[index] += 0.1
-        currentFrames[currentFrames.length - 1] += 0.1
-        updateRuns(index)                  //  increment the counter
-        if (!checkRuns()) {           //  if the counter < 10, call the loop function
-            updateFrames();             //  ..  again which will trigger another 
-        }                      //  ..  setTimeout()
-        else {
-            if (currentFrames[currentFrames.length - 1] >= 0.95) {
-                //moveOutput(function () {
-                //    updateFrames()
-                //}
-                //)
-            }
-            else {
-                //updateFrames()
-
-                console.log("ELSEE")
-            }
-        }
-    }, 150)
+    let tween3 = new TWEEN.Tween(newruns[newruns.length - 1][(newruns[newruns.length - 1]).length - 1].position, tweenGroup).to(new THREE.Vector3(finalX, finalY, finalZ), time)
+    tween.chain(tween2)
+    tween2.chain(tween3)
+    tween3.onComplete(() => {
+        //currentFrames[currentFrames.length - 1] = 0
+        //currentFramesObject.children[currentFramesObject.children.length - 1].scale.set(1, 0, 1)
+        callback()
+    })
+    tween.start()
 }
 
 function onWindowResize() {
@@ -580,7 +791,6 @@ function init() {
     cylinder.position.set(0, 0, 0)
     cylinder.name = "Cylinder"
     scene.add(cylinder);
-    console.log(cylinder)
     const axesHelper = new THREE.AxesHelper(15);
     scene.add(axesHelper);
     window.addEventListener('resize', onWindowResize);

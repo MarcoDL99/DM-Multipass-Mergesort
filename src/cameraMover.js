@@ -11,7 +11,6 @@ class CameraMover {
         this.camera.position.set(-15, 3.5, 8);
 
         this.camera.rotation.set(0.0, -1.57, 0.0)
-        console.log(this.camera)
         // CONTROLS ------------------------------------------------------------------
         //this.controls = new OrbitControls(camera, domElement);
         //this.controls.minDistance = 1;
@@ -34,7 +33,6 @@ class CameraMover {
     }
 
     rotateToBuffer() {
-        console.log(this.camera)
         let tween = new TWEEN.Tween(this.camera.rotation, this.tweenGroup).to(new THREE.Vector3(0.0, 0.0, 0.0), 1000);
         tween.onComplete(() => {
             console.log(this.camera)
