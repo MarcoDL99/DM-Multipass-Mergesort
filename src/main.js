@@ -15,10 +15,8 @@ let options =
 let maxPerLine = 10
 let maxPerColumn = 5
 let counter = 0
-let maxRunLength = 0
-let relation, frames, runs, currentFrames, currentFramesObject, currentRunsObject;
+let relation, frames, runs, currentFrames, currentFramesObject;
 let currentRun = 0;
-let currentRuns = []
 runs = [[]];
 let newruns = []
 
@@ -213,6 +211,7 @@ function readRelation() {         //STEP 0
                             currentFramesObject.children[i].scale.set(1, 0, 1)
                             currentFramesObject.children[i].position.set(0.0, -0.5, 2 + 1.5 * size * i);
                         }
+                        counter = 0
                         currentFramesObject.children[currentFramesObject.children.length - 1].material = new THREE.MeshPhongMaterial({
                             color: 0xff3030,
                             side: THREE.DoubleSide,
@@ -392,6 +391,7 @@ function setupStepI() {
     //     color: 0xff3030,
     //     side: THREE.DoubleSide,
     // })
+    // counter = 0 
     //sortRuns()
 }
 
@@ -406,10 +406,10 @@ function sortRuns() {
         currentFrames[index] += 0.1
         currentFrames[currentFrames.length - 1] += 0.1
         currentFramesObject.children[index].scale.set(1, currentFrames[index], 1)
-        currentFramesObject.children[index].position.set(-0.1, (currentFrames[index] - 1.0) / 2, 2 + 1.5 * size * index);
+        currentFramesObject.children[index].position.set(0.0, (currentFrames[index] - 1.0) / 2, 2 + 1.5 * size * index);
 
         currentFramesObject.children[options.frames - 1].scale.set(1, currentFrames[currentFrames.length - 1], 1)
-        currentFramesObject.children[options.frames - 1].position.set(-0.1, (currentFrames[currentFrames.length - 1] - 1.0) / 2, 2 + 1.5 * size * (options.frames - 1));
+        currentFramesObject.children[options.frames - 1].position.set(0.0, (currentFrames[currentFrames.length - 1] - 1.0) / 2, 2 + 1.5 * size * (options.frames - 1));
 
         let fullFrames = 0;
         for (let i = 0; i < options.frames; i++) {
@@ -418,8 +418,8 @@ function sortRuns() {
             }
         }
         console.log(fullFrames, currentFrames, runs)
-        if ((fullFrames == options.frames || fullFrames > runs.length)) { // If all frames (or the frames containing a run) are full then it means the new run has been completed. Now we need to see if..
-            for (let i = 0; i < options.frames; i++) {                    //We're done, if we need to iterate again on the current runs or if we need to iterate again on the new runs
+        if ((fullFrames == options.frames || (fullFrames > runs.length && !checkIfRunsStillLongerThanOne) || (fullFrames == 2 && runs.length == 1))) { // If all frames (or the frames containing a run) are full then it means the new run has been completed. Now we need to see if..
+            for (let i = 0; i < options.frames; i++) {                    // ....We're done, if we need to iterate again on the current runs or if we need to iterate again on the new runs
 
                 if (i >= options.frames - runs.length - 1) {
                     currentFrames[i] = 1.0
@@ -434,7 +434,6 @@ function sortRuns() {
                     if (runs[i].length == 1) {
                         scene.remove(runs[i][0])  //Since they're all full, there is only one block in each run, which we now remove from the scene
                         runs.splice(i, 1)
-
                     }
                 }
             }
@@ -461,7 +460,7 @@ function sortRuns() {
                         for (let i = 0; i < newruns.length; i++) {   //Setup the newruns for the next iteration of step I
                             runs.push([])
                             for (let j = newruns[i].length - 1; j >= 0; j--) {    //We need to flip them on the X axis
-                                newruns[i][j].material = materials[j%2]
+                                newruns[i][j].material = materials[j % 2]
                                 runs[i].push(newruns[i][j])
                             }
                         }
@@ -508,7 +507,7 @@ function sortRuns() {
                     }
                 }
                 else {  //If runs length is still more than 0, it means we have more runs to analyze in the current iteration, so we restart the analysis but without moving newruns to runs
-                    counter = 0 //Just so the new run starts with a red bloc
+                    counter = 0 //Just so the new run starts with a red block
                     setupStepI()
                     moveRunsToFrame(function () {           //Iterate step I
                         sortRuns()
@@ -556,6 +555,7 @@ function sortRuns() {
                             }
 
                             if (runs[runIndex].length > 1) {      //If there are still blocks to analyze from this run, we clean the current one and then load another one
+                                console.log("I'M HERE")
                                 scene.remove(runs[runIndex][runs[runIndex].length - 1]); //Remove the block from the scene
                                 runs[runIndex].pop()            //Clean the current block
                                 currentFramesObject.children[fullFrameIndex].scale.set(1, 0, 1)     //Reset the counter related to the frame
@@ -637,7 +637,7 @@ function findFullFrameIndex() {
 }
 
 function checkIfRunsStillLongerThanOne() {
-    for (let i = 0; i < runs.length; i++) {
+    for (let i = 0; i < Math.min(runs.length, options.frames - 1); i++) {
         if (runs[i].length > 1) {
             return true
         }
@@ -654,7 +654,6 @@ function moveRunsToFrame(callback) {
         tweens.push(new TWEEN.Tween(runs[i][runs[i].length - 1].position, tweenGroup).to(new THREE.Vector3(frames.children[i].position.x, runs[i][runs[i].length - 1].position.y, 0), time))
     }
     for (let i = 0; i < options.frames - 1 && i < runs.length; i++) {
-        currentRuns.push(false)
         if (i < tweens.length - 1) {
             tweens[i].chain(tweens[i + 1])
         }
