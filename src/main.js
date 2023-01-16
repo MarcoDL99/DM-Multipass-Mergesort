@@ -391,11 +391,27 @@ function sortRuns() {
         currentRun++            //Increase all the various counters
         currentFrames[index]++
         currentFrames[currentFrames.length - 1]++
-        currentFramesObject.children[index].scale.set(1.01, 0.1 * currentFrames[index], 1.02)
-        currentFramesObject.children[index].position.set(-0.05, (0.1 * currentFrames[index] - 1.0) / 2, 2 + 1.5 * size * index);
+        if (currentFrames[index] > 9.5) {
+            currentFramesObject.children[index].scale.set(1.01, 1.01, 1.02)
+            currentFramesObject.children[index].position.set(-0.05, (0.1 * currentFrames[index] - 1.0) / 2, 2 + 1.5 * size * index);
+        }
+        else {
+            currentFramesObject.children[index].scale.set(1.01, 0.1 * currentFrames[index], 1.02)
+            currentFramesObject.children[index].position.set(-0.05, (0.1 * currentFrames[index] - 1.0) / 2, 2 + 1.5 * size * index);
+        }
+        if (currentFrames[options.frames - 1] > 9.5) {
+            currentFramesObject.children[options.frames - 1].scale.set(1.01, 1.01, 1.02)
+            currentFramesObject.children[options.frames - 1].position.set(-0.05, (0.1 * currentFrames[options.frames - 1] - 1.0) / 2, 2 + 1.5 * size * (options.frames - 1));
+        }
+        else {
+            currentFramesObject.children[options.frames - 1].scale.set(1.01, 0.1 * currentFrames[options.frames - 1], 1.02)
+            currentFramesObject.children[options.frames - 1].position.set(-0.05, (0.1 * currentFrames[options.frames - 1] - 1.0) / 2, 2 + 1.5 * size * (options.frames - 1));
+        }
+        // currentFramesObject.children[index].scale.set(1.01, 0.1 * currentFrames[index], 1.02)
+        // currentFramesObject.children[index].position.set(-0.05, (0.1 * currentFrames[index] - 1.0) / 2, 2 + 1.5 * size * index);
 
-        currentFramesObject.children[options.frames - 1].scale.set(1.01, 0.1 * currentFrames[currentFrames.length - 1], 1.02)
-        currentFramesObject.children[options.frames - 1].position.set(-0.05, (0.1 * currentFrames[currentFrames.length - 1] - 1.0) / 2, 2 + 1.5 * size * (options.frames - 1));
+        // currentFramesObject.children[options.frames - 1].scale.set(1.01, 0.1 * currentFrames[currentFrames.length - 1], 1.02)
+        // currentFramesObject.children[options.frames - 1].position.set(-0.05, (0.1 * currentFrames[currentFrames.length - 1] - 1.0) / 2, 2 + 1.5 * size * (options.frames - 1));
 
         let fullFrames = 0;
         for (let i = 0; i < options.frames; i++) {
