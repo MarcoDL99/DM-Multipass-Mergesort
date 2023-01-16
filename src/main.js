@@ -483,7 +483,7 @@ function sortRuns() {
                                 scene.remove(runs[i][j])
                             }
                         }
-                        console.log("Animation is fully completed", newruns)
+                        console.log("Animation is fully completed.")
                     }
                 }
                 else {  //If runs length is still more than 0, it means we have more runs to analyze in the current iteration, so we restart the analysis but without moving newruns to runs
@@ -690,7 +690,6 @@ function setOptions(frames, pages, speed) {
     options.speed = speed
     options.time = Math.abs(500 + 500 * (2 - speed)) //options.time - options.time * (speed)
     options.timeout = Math.min(Math.max(15, 100 / speed), 150)
-    console.log(options)
 }
 
 function init() {

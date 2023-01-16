@@ -34,7 +34,6 @@ class CameraMover {
     rotateToBuffer() {
         let tween = new TWEEN.Tween(this.camera.rotation, this.tweenGroup).to(new THREE.Vector3(0.0, 0.0, 0.0), 1000);
         tween.onComplete(() => {
-            console.log(this.camera)
         })
         tween.start()
     }
