@@ -765,6 +765,5 @@ function render() {
     renderer.render(scene, camera);
     requestAnimationFrame(render);
     stats.update();
-    cameraMover.update();
     tweenGroup.update()
 }
