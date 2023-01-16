@@ -1,10 +1,8 @@
 import * as THREE from '../libs/three_js/three.module.js';
 import * as TWEEN from '../libs/tweenjs/tween.esm.js';
-import { GUI } from '../libs/human_interface/dat.gui.module.js';
 import Stats from '../libs/human_interface/stats.module.js';
 
-import { CameraMover } from './cameraMover.js';
-import { GUIHandler } from '../GUIHandler.js';
+import { GUIHandler } from './utils/GUIHandler.js';
 let canvas, camera, scene, renderer, pixelRatio, width, height, stats, guiHandler, cameraMover;
 let options =
 {
@@ -715,7 +713,6 @@ function init() {
     const near = 0.25;
     const far = 200;
     camera = new THREE.PerspectiveCamera(fov, aspect, near, far);
-    cameraMover = new CameraMover(camera, renderer.domElement)
 
     //Stats
     stats = new Stats();
