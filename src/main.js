@@ -676,7 +676,7 @@ function moveOutput(callback) {
 }
 
 function onWindowResize() {
-    width = canvas.clientWidth * pixelRatio | 0;
+    width = 0.9 * canvas.clientWidth * pixelRatio | 0;
     height = canvas.clientHeight * pixelRatio | 0;
     canvas = renderer.domElement;
     renderer.setSize(width, height, false);
